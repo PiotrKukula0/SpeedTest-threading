@@ -2,30 +2,25 @@ import tkinter as tk
 from tkinter import ttk
 from threading import Thread
 import speedtest
-import time
 from queue import Queue
+import time
 
 
-def test_internet_speed():
-    st = speedtest.Speedtest()
-    download_speed = st.download() / 1000000
-    upload_speed = st.upload() / 1000000
-    ping_latency = st.results.ping
-    return download_speed, upload_speed, ping_latency
-
-
-speed_queue = Queue()
+def test_internet_speed(speed_queue):
+    while True:
+        st = speedtest.Speedtest()
+        download_speed = st.download() / 1000000
+        upload_speed = st.upload() / 1000000
+        ping_latency = st.results.ping
+        speed_queue.put((download_speed, upload_speed, ping_latency))
+        time.sleep(2)
 
 
 def start_speed_test():
-    Thread(target=update_speeds, daemon=True).start()
-
-
-def update_speeds():
-    while True:
-        download_speed, upload_speed, ping_latency = test_internet_speed()
-        speed_queue.put((download_speed, upload_speed, ping_latency))
-        time.sleep(0.5)
+    global speed_thread
+    speed_thread = Thread(target=test_internet_speed,
+                          args=(speed_queue,), daemon=True)
+    speed_thread.start()
 
 
 def update_labels():
@@ -41,6 +36,8 @@ def update_labels():
 
 root = tk.Tk()
 root.title("Test prędkości internetu")
+
+speed_queue = Queue()
 
 download_speed_label = tk.Label(root, text="0.00 Mbps")
 download_speed_label.pack()
